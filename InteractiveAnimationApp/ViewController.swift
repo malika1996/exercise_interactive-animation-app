@@ -15,15 +15,16 @@ class ViewController: UIViewController {
         case closed
     }
 
-    @IBOutlet weak var headerView: UIView!
-    @IBOutlet weak var lblOpenStateTitle: UILabel!
-    @IBOutlet weak var drawerView: UIView!
-    @IBOutlet weak var lblClosedStateTitle: UILabel!
+    @IBOutlet weak private var headerView: UIView!
+    @IBOutlet weak private var lblOpenStateTitle: UILabel!
+    @IBOutlet weak private var drawerView: UIView!
+    @IBOutlet weak private var lblClosedStateTitle: UILabel!
     
-    var isDrawerOpen = true
-    var defaultHeightOfView = 600
-    var runningAnimationArray = [UIViewPropertyAnimator]()
-    var animationProgressWhenInterrupted:CGFloat = 0
+    private var isDrawerOpen = true
+    private let defaultHeightOfDrawerView = 600
+    private let defaultHeightOfHeaderView = 60
+    private var runningAnimationArray = [UIViewPropertyAnimator]()
+    private var animationProgressWhenInterrupted:CGFloat = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,14 +35,15 @@ class ViewController: UIViewController {
         self.drawerView.clipsToBounds = true
         self.drawerView.layer.cornerRadius = 30.0
         self.lblClosedStateTitle.alpha = 0
+        self.lblClosedStateTitle.transform = CGAffineTransform(scaleX: 1.6, y: 1.6).concatenating(CGAffineTransform(translationX: 0, y: 15))
     }
     
-    @objc func handleTap(tapGesture: UITapGestureRecognizer) {
+    @objc private func handleTap(tapGesture: UITapGestureRecognizer) {
         let nextState = self.isDrawerOpen ? DrawerState.closed : DrawerState.open
         animateTransitions(for: nextState)
     }
 
-    @objc func handlePan(recognizer: UIPanGestureRecognizer) {
+    @objc private func handlePan(recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
             self.startAnimations(for: self.isDrawerOpen ? DrawerState.closed : DrawerState.open)
@@ -58,7 +60,7 @@ class ViewController: UIViewController {
         }
     }
 
-    func startAnimations(for state: DrawerState) {
+    private func startAnimations(for state: DrawerState) {
         animateTransitions(for: state)
         for animator in self.runningAnimationArray {
             animator.pauseAnimation()
@@ -66,24 +68,21 @@ class ViewController: UIViewController {
         }
     }
 
-    func animateTransitions(for nextState: DrawerState) {
+    private func animateTransitions(for nextState: DrawerState) {
         if self.runningAnimationArray.isEmpty {
             let frameAnimator = UIViewPropertyAnimator(duration: 1.5, dampingRatio: 1, animations: {
                 if nextState == .open {
-                    self.drawerView.frame.origin.y = self.view.frame.height - 600
+                    self.drawerView.frame.origin.y = self.view.frame.height - CGFloat(self.defaultHeightOfDrawerView)
                 } else {
-                    self.drawerView.frame.origin.y = self.view.frame.height - 60
+                    self.drawerView.frame.origin.y = self.view.frame.height - CGFloat(self.defaultHeightOfHeaderView)
                 }
             })
             frameAnimator.addCompletion({finalPosition in
                 switch finalPosition {
                 case .start:
-                    print("Frame transition final position: start)")
                     self.isDrawerOpen = !self.isDrawerOpen
-                case .current: print("Frame transition final position: current)")
-                case .end: print("Frame transition final position: end");
-                @unknown default:
-                    print("error")
+                default:
+                    break
                 }
                 self.runningAnimationArray.removeAll()
                 self.isDrawerOpen = !self.isDrawerOpen
@@ -98,23 +97,23 @@ class ViewController: UIViewController {
                 }
             }
             cornerRadiusAnimator?.addCompletion({_ in
-                print("corner radius animation completion block; state: \(self.isDrawerOpen ? DrawerState.open : DrawerState.closed)")
                 cornerRadiusAnimator = nil
             })
+            
             var textColorFontAnimator: UIViewPropertyAnimator? = UIViewPropertyAnimator(duration: 1.5, curve: .linear, animations: {
                 self.lblOpenStateTitle.textColor = .white
                 self.lblClosedStateTitle.textColor = .white
                 switch nextState {
                 case .open:
-                    self.lblClosedStateTitle.transform = CGAffineTransform(scaleX: 1.2, y: 1.2)
+                    self.lblClosedStateTitle.transform = CGAffineTransform(scaleX: 1.6, y: 1.6).concatenating(CGAffineTransform(translationX: 0, y: 15))
                     self.lblOpenStateTitle.transform = .identity
                     self.lblOpenStateTitle.alpha = 1
                     self.lblOpenStateTitle.textColor = .black
                     self.lblClosedStateTitle.alpha = 0
                     
                 case .closed:
-                    self.lblOpenStateTitle.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
-                    self.lblClosedStateTitle.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
+                    self.lblOpenStateTitle.transform = CGAffineTransform(scaleX: 0.5, y: 0.5).concatenating(CGAffineTransform(translationX: 0, y: -15))
+                    self.lblClosedStateTitle.transform = .identity
                     self.lblOpenStateTitle.alpha = 0
                     self.lblClosedStateTitle.textColor = .blue
                     self.lblClosedStateTitle.alpha = 1
@@ -125,6 +124,7 @@ class ViewController: UIViewController {
                 self.lblClosedStateTitle.textColor = .blue
                 textColorFontAnimator = nil
             })
+            
             //Start animations
             frameAnimator.startAnimation()
             textColorFontAnimator?.startAnimation()
@@ -137,7 +137,7 @@ class ViewController: UIViewController {
         }
     }
 
-    func updateAnimations(fractionCompleted: CGFloat) {
+    private func updateAnimations(fractionCompleted: CGFloat) {
         var fraction = fractionCompleted
         for animator in self.runningAnimationArray {
             if animator.isReversed {
@@ -147,7 +147,7 @@ class ViewController: UIViewController {
         }
     }
 
-    func continueInteractiveTransitionAccordingToInterruption(yVelocity: CGFloat) {
+    private func continueInteractiveTransitionAccordingToInterruption(yVelocity: CGFloat) {
         //Knowing the direction of the touches
         let shouldClose = yVelocity > 0
         for animator in runningAnimationArray {
@@ -158,7 +158,6 @@ class ViewController: UIViewController {
                 if (shouldClose && animator.isReversed) {
                     animator.isReversed = !animator.isReversed
                 }
-                
             } else { //Closed
                 if (shouldClose && !animator.isReversed)  {
                     animator.isReversed = !animator.isReversed
